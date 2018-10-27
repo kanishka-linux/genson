@@ -1,3 +1,3 @@
-# Jake
+# Genson
 
-**J**SON Schema F**ake** Data Generator
+JSON Schema Fake Data Generator
