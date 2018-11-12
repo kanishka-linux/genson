@@ -20,8 +20,10 @@ defmodule Jake.MixProject do
   defp deps do
     [
       {:stream_data, "~> 0.4"},
-      {:ex_json_schema, "~> 0.5"},
-      {:jason, "~> 1.1", only: :test}
+      {:jason, "~> 1.1", only: :test},
+      {:randex, git: "https://github.com/ananthakumaran/randex", tag: "v0.4.0"},
+      {:poison, "~>3.1"},
+      {:ex_json_schema, "~> 0.5.4"}
     ]
   end
 end
