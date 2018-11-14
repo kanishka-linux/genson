@@ -14,18 +14,7 @@ defmodule Jake.String do
   def stringer(map, enum, pattern) when is_nil(enum) and is_nil(pattern) do
     {min, max} = find_min_max(map)
     re = Randex.stream(~r/[a-zA-Z0-9\_]{#{min},#{max}}/)
-
-    if min <= max do
-      StreamData.bind_filter(StreamData.string(:alphanumeric), fn
-        x when byte_size(x) in min..max ->
-          {:cont, StreamData.constant(x)}
-
-        x when true ->
-          {:cont, Enum.take(re, 1) |> StreamData.member_of()}
-      end)
-    end
-
-    # StreamData.string(:alphanumeric, [{:max_length, max},{:min_length, min}])
+    StreamData.string(:alphanumeric, [{:max_length, max}, {:min_length, min}])
   end
 
   def stringer(map, enum, pattern) when is_list(enum) do
@@ -37,10 +26,7 @@ defmodule Jake.String do
     pat = Randex.stream(~r/#{pattern}/, mod: Randex.Generator.StreamData)
 
     if min <= max do
-      StreamData.bind_filter(pat, fn
-        x when byte_size(x) in min..max -> {:cont, StreamData.constant(x)}
-        x when true -> :skip
-      end)
+      StreamData.filter(pat, fn x -> String.length(x) in min..max end)
     end
   end
 end
