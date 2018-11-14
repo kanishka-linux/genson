@@ -1,7 +1,9 @@
 defmodule Jake.Number do
-  @num_min 0
+  @num_min -9_007_199_254_740_991
 
-  @num_max 100_000
+  @num_max 9_007_199_254_740_991
+
+  @max_mult 100
 
   def gen_number(map, type) do
     gen_number_init(map, map["enum"], type)
@@ -146,12 +148,11 @@ defmodule Jake.Number do
 
   def getmultipleof(mult, min, max) when is_float(mult) do
     fn_check = fn x, y -> x * y >= min and x * y <= max end
-
-    for(n <- trunc(min / mult)..trunc(max / mult), fn_check.(n, mult), do: n * mult)
-    |> StreamData.member_of()
+    lo = trunc(min / mult)
+    for(n <- lo..(lo + @max_mult), fn_check.(n, mult), do: n * mult) |> StreamData.member_of()
   end
 
   def get_float_number(min, max) do
-    StreamData.filter(StreamData.float([{:min, min}, {:max, max}]), fn x -> true end, 100)
+    StreamData.float([{:min, min}, {:max, max}])
   end
 end
