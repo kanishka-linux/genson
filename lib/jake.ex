@@ -33,8 +33,6 @@ defmodule Jake do
     gen_all(map, map["enum"], map["type"])
   end
 
-  def gen_all(map, enum, type) when enum != nil, do: gen_enum(enum, type)
-
   def gen_all(map, enum, type) when is_list(type) do
     list = for n <- type, do: %{"type" => n}
     nmap = Map.drop(map, ["type"])
@@ -42,6 +40,8 @@ defmodule Jake do
   end
 
   def gen_all(map, enum, type) when type in @types, do: gen_type(type, map)
+
+  def gen_all(map, enum, type) when enum != nil, do: gen_enum(enum, type)
 
   def gen_all(map, enum, type) when type == nil do
     Jake.Notype.gen_notype(map, type)
