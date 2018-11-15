@@ -28,7 +28,18 @@ defmodule Jake.Object do
   end
 
   def objectype(map, enum, properties) when is_map(properties) do
-    new_prop = for {k, v} <- properties, into: %{}, do: {k, Jake.gen_init(v)}
+    nproperties = check_pattern_properties(map, properties, map["patternProperties"])
+
+    pmap =
+      if nproperties != nil and is_list(nproperties) do
+        nlist = for n <- nproperties, length(n) > 0, do: Enum.fetch!(n, 0)
+        Enum.reduce(nlist, %{}, fn x, acc -> Map.merge(x, acc) end)
+      else
+        properties
+      end
+
+    map = Map.put(map, "properties", pmap)
+    new_prop = for {k, v} <- pmap, into: %{}, do: {k, Jake.gen_init(v)}
 
     req =
       if map["required"] do
@@ -44,6 +55,18 @@ defmodule Jake.Object do
       check_additional_properties(map, 0, req, non_req, new_prop)
     else
       check_additional_properties(map, Map.size(req), req, non_req, new_prop)
+    end
+  end
+
+  def check_pattern_properties(map, properties, pprop) do
+    if pprop do
+      for {k, v} <- properties do
+        for {key, value} <- pprop,
+            Regex.match?(~r/#{key}/, k),
+            do: Map.put(properties, k, Map.merge(v, value))
+      end
+    else
+      properties
     end
   end
 
