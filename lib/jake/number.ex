@@ -9,19 +9,19 @@ defmodule Jake.Number do
     gen_number_init(map, map["enum"], type)
   end
 
+  def get_min_max(map) do
+    min = Map.get(map, "minimum", @num_min)
+    max = Map.get(map, "maximum", @num_max)
+    {min, max}
+  end
+
   def gen_number_init(map, enum, type) when is_list(enum), do: Jake.gen_enum(enum, type)
 
   def gen_number_init(map, enum, type) when type in ["integer", "number"] do
-    {step_left, step_right} = find_step(map, map["minimum"], map["maximum"])
+    {min_i, max_i} = get_min_max(map)
+    {step_left, step_right} = find_step(map, min_i, max_i)
     min = findmin(map, @num_min, step_left, type)
-
-    max =
-      if map["maximum"] == nil and map["multipleOf"] != nil and map["multipleOf"] < 1 do
-        findmax(map, 10, step_right, type)
-      else
-        findmax(map, @num_max, step_right, type)
-      end
-
+    max = findmax(map, @num_max, step_right, type)
     random_number_gen(map["multipleOf"], type, min, max)
   end
 
