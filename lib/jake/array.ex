@@ -16,13 +16,8 @@ defmodule Jake.Array do
 
   def arraytype(map, enum, items) when enum != nil, do: Jake.gen_enum(enum, "array")
 
-  def arraytype(map, enum, items) when is_list(items) or is_map(items) do
-    list =
-      if is_list(items) do
-        for n <- items, is_map(n), do: Jake.gen_init(n)
-      else
-        [Jake.gen_init(items)]
-      end
+  def arraytype(map, enum, items) when is_list(items) do
+    list = for n <- items, is_map(n), do: Jake.gen_init(n)
 
     {min, max} = get_min_max(map)
 
@@ -36,6 +31,12 @@ defmodule Jake.Array do
       _ ->
         add_additional_items(list, false, max, min)
     end
+  end
+
+  def arraytype(map, enum, items) when is_map(items) do
+    {min, max} = get_min_max(map)
+    item = Jake.gen_init(items)
+    decide_min_max(map, item, min, max)
   end
 
   def get_min_max(map) do
