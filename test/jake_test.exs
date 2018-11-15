@@ -12,19 +12,19 @@ defmodule JakeTest do
           "draft4/enum.json",
           "draft4/minimum.json",
           "draft4/maximum.json",
-          "draft4/pattern.json",
           "draft4/items.json",
           "draft4/minItems.json",
           "draft4/maxItems.json",
           "draft4/uniqItems.json",
+          "draft4/pattern.json",
           "draft4/minLength.json",
           "draft4/maxLength.json",
           "draft4/maxProperties.json",
           "draft4/minProperties.json",
           "draft4/additionalItems.json",
-          "draft4/properties.json",
           "draft4/additionalProperties.json",
-          "draft4/multipleOf.json"
+          "draft4/multipleOf.json",
+          "draft4/properties.json"
         ] do
       Path.wildcard("test_suite/tests/#{path}")
       |> Enum.map(fn path -> File.read!(path) |> Poison.decode!() end)
@@ -43,7 +43,17 @@ defmodule JakeTest do
     IO.inspect(Enum.take(gen, 3))
 
     Enum.take(gen, 100)
-    |> Enum.each(fn val -> ExJsonSchema.Validator.valid?(schema, val) end)
+    |> Enum.each(fn val ->
+      result = ExJsonSchema.Validator.valid?(schema, val)
+
+      if result == false do
+        flunk(
+          "Invalid data: \nschema: #{inspect(schema)}\ngenerated: #{inspect(val)}\nerror: #{
+            inspect(result)
+          }"
+        )
+      end
+    end)
   end
 
   test "test anyOf" do
@@ -53,11 +63,6 @@ defmodule JakeTest do
 
   test "test allOf" do
     jschema = ~s({"allOf": [{"type": "integer"}, {"maximum": 255}]})
-    assert test_generator(jschema)
-  end
-
-  test "test allOf mix types" do
-    jschema = ~s({"allOf": [{"type": "integer"}, {"type": "boolean"}]})
     assert test_generator(jschema)
   end
 
@@ -188,6 +193,13 @@ defmodule JakeTest do
 
   test "test only enum" do
     jschema = ~s({"enum": [1, 2, "hello", -3, "world"]})
+    assert test_generator(jschema)
+  end
+
+  test "test only enum with mix types" do
+    jschema =
+      ~s({"type": ["integer", "string"], "enum": [1, 2, "hello", -3, "world", null, true]})
+
     assert test_generator(jschema)
   end
 
