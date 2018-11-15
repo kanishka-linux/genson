@@ -25,7 +25,7 @@ defmodule Jake do
     nmap = Map.drop(map, ["allOf"])
 
     Enum.reduce(options, %{}, fn x, acc -> Jake.MapUtil.deep_merge(acc, x) end)
-    |> Map.merge(nmap)
+    |> Jake.MapUtil.deep_merge(nmap)
     |> Jake.gen_init()
   end
 
@@ -93,6 +93,7 @@ defmodule Jake do
           list
       end
 
+    IO.inspect(nlist)
     StreamData.member_of(nlist)
   end
 end
