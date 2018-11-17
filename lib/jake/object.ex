@@ -31,7 +31,59 @@ defmodule Jake.Object do
             into: %{},
             do: {Randex.stream(~r/#{k}/, mod: Randex.Generator.StreamData), Jake.gen_init(v)}
     else
-      decide_min_max(map, Jake.gen_init(%{"type" => "string"}), StreamData.term(), min, max)
+      if map["dependencies"] do
+        decide_dep_and_properties(map)
+      else
+        decide_min_max(map, Jake.gen_init(%{"type" => "string"}), StreamData.term(), min, max)
+      end
+    end
+  end
+
+  def gen_with_no_prop(map) do
+    {min, max} = get_min_max(map)
+
+    Jake.gen_init(%{"type" => "string"})
+    |> StreamData.map_of(StreamData.term(), min_length: min, max_length: max)
+  end
+
+  def decide_dep_and_properties(map) do
+    dep = map["dependencies"]
+
+    list_with_map =
+      for {k, v} <- dep do
+        IO.inspect(v)
+
+        if is_list(v) do
+          item = %{k => StreamData.term()}
+          nmap = for i <- v, into: %{}, do: {i, StreamData.term()}
+          Map.merge(item, nmap)
+        else
+          prop_list = for {kl, vl} <- v["properties"], do: kl
+          {k, prop_list, v["properties"]}
+        end
+      end
+
+    resolve_dep(map, list_with_map)
+  end
+
+  def resolve_dep(map, list_with_map) do
+    if is_map(List.first(list_with_map)) do
+      properties = Enum.reduce(list_with_map, %{}, fn x, acc -> Map.merge(acc, x) end)
+      check_additional_properties(map, 0, nil, nil, properties)
+    else
+      dependencies =
+        for({k, prop_list, prop_map} <- list_with_map, do: %{k => prop_list})
+        |> Enum.reduce(%{}, fn x, acc -> Map.merge(x, acc) end)
+
+      IO.inspect(dependencies)
+
+      properties =
+        for({k, prop_list, prop_map} <- list_with_map, do: prop_map)
+        |> Enum.reduce(%{}, fn x, acc -> Map.merge(x, acc) end)
+
+      map = Map.put(map, "properties", properties) |> Map.put("dependencies", dependencies)
+      IO.inspect(map)
+      objectype(map, nil, properties)
     end
   end
 
@@ -86,6 +138,8 @@ defmodule Jake.Object do
         StreamData.optional_map(new_prop)
       end
 
+    IO.inspect(prop)
+
     StreamData.bind(prop, fn mapn ->
       StreamData.bind_filter(
         additional,
@@ -107,7 +161,7 @@ defmodule Jake.Object do
   def create_dep_list_map(new_prop, dep) do
     dep_list = for {k, v} <- dep, do: k
     {dep_map, non_dep_map} = Map.split(new_prop, dep_list)
-    IO.inspect(non_dep_map)
+    # IO.inspect(non_dep_map)
 
     list_with_map =
       for {k, v} <- dep do
@@ -177,22 +231,35 @@ defmodule Jake.Object do
     )
   end
 
-  def check_additional_properties(map, req_size, req, non_req, new_prop)
+  def check_additional_properties(map, req_size, req, _non_req, new_prop)
       when is_nil(req) or req_size == 0 do
     {min, max} = get_min_max(map)
 
     case {map["additionalProperties"], min, max} do
       {x, y, z} when is_nil(x) or (is_boolean(x) and x) ->
-        additional = objectype(map, nil, nil)
-        bind_function(new_prop, additional, y, z)
+        additional = gen_with_no_prop(map)
+
+        check_dependencies(map, new_prop)
+        |> bind_function(additional, y, z)
 
       {x, y, z} when is_boolean(x) and not x ->
-        StreamData.filter(StreamData.optional_map(new_prop), fn nmap -> map_size(nmap) in y..z end)
+        val = check_dependencies(map, new_prop)
+
+        prop =
+          if is_list(val) do
+            StreamData.one_of(val)
+          else
+            StreamData.optional_map(val)
+          end
+
+        StreamData.filter(prop, fn nmap -> map_size(nmap) in y..z end)
 
       {x, y, z} when is_map(x) ->
         obj = Jake.gen_init(x)
         key = Jake.gen_init(%{"type" => "string"})
-        bind_function(new_prop, StreamData.map_of(key, obj), y, z)
+
+        check_dependencies(map, new_prop)
+        |> bind_function(StreamData.map_of(key, obj), y, z)
     end
   end
 
@@ -209,7 +276,7 @@ defmodule Jake.Object do
 
     case {map["additionalProperties"], min, max} do
       {x, y, z} when is_nil(x) or (is_boolean(x) and x) ->
-        additional = objectype(map, nil, nil)
+        additional = gen_with_no_prop(map)
 
         check_dependencies(map, non_req)
         |> bind_function(additional, y, z)
