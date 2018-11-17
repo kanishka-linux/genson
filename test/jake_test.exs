@@ -24,7 +24,8 @@ defmodule JakeTest do
           "draft4/additionalItems.json",
           "draft4/additionalProperties.json",
           "draft4/multipleOf.json",
-          "draft4/properties.json"
+          "draft4/properties.json",
+          "draft4/patternProperties.json"
         ] do
       Path.wildcard("test_suite/tests/#{path}")
       |> Enum.map(fn path -> File.read!(path) |> Poison.decode!() end)
@@ -79,6 +80,27 @@ defmodule JakeTest do
   test "test object with properties" do
     jschema =
       ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}}, "required":["name", "age"]})
+
+    assert test_generator(jschema)
+  end
+
+  test "test object with required properties and dependencies" do
+    jschema =
+      ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}, "dt":{"type":"string", "pattern":"[0][1-9]|[1-2][0-9]|[3][0-1]"}, "address": {"type":"string"}}, "required":["name"], "dependencies":{"dt":["age"], "age":["dt"]}})
+
+    assert test_generator(jschema)
+  end
+
+  test "test object with required properties, dependencies and no additional properties" do
+    jschema =
+      ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}, "dt":{"type":"string", "pattern":"[0][1-9]|[1-2][0-9]|[3][0-1]"}, "address": {"type":"string"}}, "required":["name"], "dependencies":{"dt":["age"], "age":["dt"]}, "additionalProperties":false})
+
+    assert test_generator(jschema)
+  end
+
+  test "test object with required properties, dependencies and no map of additional properties" do
+    jschema =
+      ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}, "dt":{"type":"string", "pattern":"[0][1-9]|[1-2][0-9]|[3][0-1]"}, "address": {"type":"string"}}, "required":["name"], "dependencies":{"dt":["age"], "age":["dt"]}, "additionalProperties":{"type":"boolean"}})
 
     assert test_generator(jschema)
   end
