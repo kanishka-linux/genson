@@ -14,6 +14,7 @@ defmodule Jake.Notype do
     "maxItems" => "array",
     "uniqueItems" => "array",
     "properties" => "object",
+    "patternProperties" => "object",
     "additionalProperties" => "object",
     "required" => "object",
     "minProperties" => "object",
