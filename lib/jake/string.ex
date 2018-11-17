@@ -13,7 +13,6 @@ defmodule Jake.String do
 
   def stringer(map, enum, pattern) when is_nil(enum) and is_nil(pattern) do
     {min, max} = find_min_max(map)
-    re = Randex.stream(~r/[a-zA-Z0-9\_]{#{min},#{max}}/)
     StreamData.string(:alphanumeric, [{:max_length, max}, {:min_length, min}])
   end
 
