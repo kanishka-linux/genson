@@ -16,6 +16,7 @@ defmodule Jake.Notype do
     "properties" => "object",
     "patternProperties" => "object",
     "additionalProperties" => "object",
+    "dependencies" => "object",
     "required" => "object",
     "minProperties" => "object",
     "maxProperties" => "object"
