@@ -25,7 +25,8 @@ defmodule JakeTest do
           "draft4/additionalProperties.json",
           "draft4/multipleOf.json",
           "draft4/properties.json",
-          "draft4/patternProperties.json"
+          "draft4/patternProperties.json",
+          "draft4/dependencies.json"
         ] do
       Path.wildcard("test_suite/tests/#{path}")
       |> Enum.map(fn path -> File.read!(path) |> Poison.decode!() end)
@@ -98,9 +99,30 @@ defmodule JakeTest do
     assert test_generator(jschema)
   end
 
-  test "test object with required properties, dependencies and no map of additional properties" do
+  test "test object with required properties, dependencies and map of additional properties" do
     jschema =
       ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}, "dt":{"type":"string", "pattern":"[0][1-9]|[1-2][0-9]|[3][0-1]"}, "address": {"type":"string"}}, "required":["name"], "dependencies":{"dt":["age"], "age":["dt"]}, "additionalProperties":{"type":"boolean"}})
+
+    assert test_generator(jschema)
+  end
+
+  test "test object with dependencies and map of additional properties" do
+    jschema =
+      ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}, "dt":{"type":"string", "pattern":"[0][1-9]|[1-2][0-9]|[3][0-1]"}, "address": {"type":"string"}}, "dependencies":{"dt":["age"], "age":["dt"]}, "additionalProperties":{"type":"boolean"}})
+
+    assert test_generator(jschema)
+  end
+
+  test "test object with dependencies and no additional properties" do
+    jschema =
+      ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}, "dt":{"type":"string", "pattern":"[0][1-9]|[1-2][0-9]|[3][0-1]"}, "address": {"type":"string"}}, "dependencies":{"dt":["age"], "age":["dt"]}, "additionalProperties":false})
+
+    assert test_generator(jschema)
+  end
+
+  test "test object with dependencies and additional properties" do
+    jschema =
+      ~s({"type": "object", "properties": {"name":{"type":"string", "maxLength": 10}, "age":{"type": "integer", "minimum": 1, "maximum": 125}, "dt":{"type":"string", "pattern":"[0][1-9]|[1-2][0-9]|[3][0-1]"}, "address": {"type":"string"}}, "dependencies":{"dt":["age"], "age":["dt"]}, "additionalProperties":true})
 
     assert test_generator(jschema)
   end
