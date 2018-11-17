@@ -24,7 +24,15 @@ defmodule Jake.Object do
 
   def objectype(map, enum, properties) when is_nil(properties) and is_nil(enum) do
     {min, max} = get_min_max(map)
-    decide_min_max(map, Jake.gen_init(%{"type" => "string"}), StreamData.term(), min, max)
+
+    if map["patternProperties"] do
+      nlist =
+        for {k, v} <- map["patternProperties"],
+            into: %{},
+            do: {Randex.stream(~r/#{k}/, mod: Randex.Generator.StreamData), Jake.gen_init(v)}
+    else
+      decide_min_max(map, Jake.gen_init(%{"type" => "string"}), StreamData.term(), min, max)
+    end
   end
 
   def objectype(map, enum, properties) when is_map(properties) do
@@ -71,7 +79,14 @@ defmodule Jake.Object do
   end
 
   def bind_function(new_prop, additional, y, z) do
-    StreamData.bind(StreamData.optional_map(new_prop), fn mapn ->
+    prop =
+      if is_list(new_prop) do
+        StreamData.one_of(new_prop)
+      else
+        StreamData.optional_map(new_prop)
+      end
+
+    StreamData.bind(prop, fn mapn ->
       StreamData.bind_filter(
         additional,
         fn
@@ -89,13 +104,36 @@ defmodule Jake.Object do
     end)
   end
 
-  def bind_function_req(req, non_req, y, z) when is_map(non_req) or is_nil(non_req) do
+  def create_dep_list_map(new_prop, dep) do
+    dep_list = for {k, v} <- dep, do: k
+    {dep_map, non_dep_map} = Map.split(new_prop, dep_list)
+    IO.inspect(non_dep_map)
+
+    list_with_map =
+      for {k, v} <- dep do
+        item = %{k => get_in(new_prop, [k])}
+        nmap = for i <- v, into: %{}, do: {i, get_in(new_prop, [i])}
+        StreamData.fixed_map(Map.merge(item, nmap))
+      end
+
+    list_with_map ++ [StreamData.optional_map(non_dep_map)]
+  end
+
+  def bind_function_req(non_req, req, y, z)
+      when is_map(non_req) or is_nil(non_req) or is_list(non_req) do
+    prop =
+      if is_list(non_req) do
+        StreamData.one_of(non_req)
+      else
+        StreamData.optional_map(non_req)
+      end
+
     StreamData.bind_filter(
       StreamData.fixed_map(req),
       fn
-        mapn when is_map(non_req) ->
+        mapn when is_map(non_req) or is_list(non_req) ->
           {:cont,
-           StreamData.bind_filter(StreamData.optional_map(non_req), fn
+           StreamData.bind_filter(prop, fn
              nmap
              when (map_size(mapn) + map_size(nmap)) in y..z ->
                {:cont, StreamData.constant(Map.merge(mapn, nmap))}
@@ -118,7 +156,7 @@ defmodule Jake.Object do
     )
   end
 
-  def bind_function_req(req, non_req, y, z, add) when not is_nil(non_req) do
+  def bind_function_req(non_req, req, y, z, add) when not is_nil(non_req) do
     StreamData.bind(
       StreamData.fixed_map(req),
       fn
@@ -149,22 +187,20 @@ defmodule Jake.Object do
         bind_function(new_prop, additional, y, z)
 
       {x, y, z} when is_boolean(x) and not x ->
-        StreamData.bind_filter(
-          StreamData.optional_map(new_prop),
-          fn
-            map
-            when map_size(map) in y..z ->
-              {:cont, StreamData.constant(map)}
-
-            map when true ->
-              :skip
-          end
-        )
+        StreamData.filter(StreamData.optional_map(new_prop), fn nmap -> map_size(nmap) in y..z end)
 
       {x, y, z} when is_map(x) ->
         obj = Jake.gen_init(x)
         key = Jake.gen_init(%{"type" => "string"})
         bind_function(new_prop, StreamData.map_of(key, obj), y, z)
+    end
+  end
+
+  def check_dependencies(map, non_req) do
+    if map["dependencies"] do
+      create_dep_list_map(non_req, map["dependencies"])
+    else
+      non_req
     end
   end
 
@@ -174,18 +210,23 @@ defmodule Jake.Object do
     case {map["additionalProperties"], min, max} do
       {x, y, z} when is_nil(x) or (is_boolean(x) and x) ->
         additional = objectype(map, nil, nil)
-        val2 = bind_function(non_req, additional, y, z)
-        bind_function_req(req, val2, y, z, "additional")
+
+        check_dependencies(map, non_req)
+        |> bind_function(additional, y, z)
+        |> bind_function_req(req, y, z, "additional")
 
       {x, y, z} when is_boolean(x) and not x ->
-        bind_function_req(req, non_req, y, z)
+        check_dependencies(map, non_req)
+        |> bind_function_req(req, y, z)
 
       {x, y, z} when is_map(x) ->
         obj = Jake.gen_init(x)
         key = Jake.gen_init(%{"type" => "string"})
         val1 = StreamData.map_of(key, obj, min_length: y, max_length: z)
-        val2 = bind_function(non_req, val1, y, z)
-        bind_function_req(req, val2, y, z, "additional")
+
+        check_dependencies(map, non_req)
+        |> bind_function(val1, y, z)
+        |> bind_function_req(req, y, z, "additional")
     end
   end
 
