@@ -27,7 +27,8 @@ defmodule JakeTest do
           "draft4/properties.json",
           "draft4/patternProperties.json",
           "draft4/dependencies.json",
-          "draft4/default.json"
+          "draft4/default.json",
+          "draft4/oneOf.json"
         ] do
       Path.wildcard("test_suite/tests/#{path}")
       |> Enum.map(fn path -> File.read!(path) |> Poison.decode!() end)
@@ -66,6 +67,11 @@ defmodule JakeTest do
 
   test "test allOf" do
     jschema = ~s({"allOf": [{"type": "integer"}, {"maximum": 255}]})
+    assert test_generator(jschema)
+  end
+
+  test "test oneOf" do
+    jschema = ~s({"type": "integer", "minimum": 29, "oneOf": [{"maximum": 255}, {"minimum": 25}]})
     assert test_generator(jschema)
   end
 
