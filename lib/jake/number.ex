@@ -104,7 +104,7 @@ defmodule Jake.Number do
   end
 
   def random_number_float(mult, min, max) when mult == nil do
-    get_float_number(min, max)
+    StreamData.float([{:min, min}, {:max, max}])
   end
 
   def findmax(map, max, _, type) when type == "integer" do
@@ -150,9 +150,5 @@ defmodule Jake.Number do
     fn_check = fn x, y -> x * y >= min and x * y <= max end
     lo = trunc(min / mult)
     for(n <- lo..(lo + @max_mult), fn_check.(n, mult), do: n * mult) |> StreamData.member_of()
-  end
-
-  def get_float_number(min, max) do
-    StreamData.float([{:min, min}, {:max, max}])
   end
 end
