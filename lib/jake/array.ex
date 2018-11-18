@@ -76,6 +76,10 @@ defmodule Jake.Array do
     end
   end
 
+  def decide_min_max(map, item, min, max) do
+    raise "Bounds of items not well defined"
+  end
+
   def get_one_of() do
     for(n <- @type_list, is_map(n), do: Jake.gen_init(n)) |> StreamData.one_of()
   end
