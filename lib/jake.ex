@@ -21,6 +21,43 @@ defmodule Jake do
     |> StreamData.one_of()
   end
 
+  def gen_init(%{"oneOf" => options} = map) when is_list(options) do
+    nmap = Map.drop(map, ["oneOf"])
+
+    tail_schema = fn tail ->
+      Enum.reduce(tail, %{}, fn x, acc -> Jake.MapUtil.deep_merge(acc, x) end)
+    end
+
+    nlist =
+      for {n, counter} <- Enum.with_index(options) do
+        hd = Map.merge(nmap, n) |> Jake.gen_init()
+        tail = List.delete_at(options, counter) |> tail_schema.()
+        {hd, tail}
+      end
+
+    try_one_of(nlist, 0)
+  end
+
+  def try_one_of(nlist, index) do
+    data = filter_mutually_exclusive(nlist, index)
+
+    try do
+      Enum.take(data, 25)
+      data
+    rescue
+      _ -> filter_mutually_exclusive(nlist, index + 1)
+    end
+  end
+
+  def filter_mutually_exclusive(nlist, index) do
+    if index < length(nlist) do
+      {head, tail_schema} = Enum.at(nlist, index)
+      StreamData.filter(head, fn hd -> not ExJsonSchema.Validator.valid?(tail_schema, hd) end)
+    else
+      raise "oneOf combination not possible"
+    end
+  end
+
   def gen_init(%{"allOf" => options} = map) when is_list(options) do
     nmap = Map.drop(map, ["allOf"])
 
