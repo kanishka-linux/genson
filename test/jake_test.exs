@@ -26,7 +26,8 @@ defmodule JakeTest do
           "draft4/multipleOf.json",
           "draft4/properties.json",
           "draft4/patternProperties.json",
-          "draft4/dependencies.json"
+          "draft4/dependencies.json",
+          "draft4/default.json"
         ] do
       Path.wildcard("test_suite/tests/#{path}")
       |> Enum.map(fn path -> File.read!(path) |> Poison.decode!() end)
