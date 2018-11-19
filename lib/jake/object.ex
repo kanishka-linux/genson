@@ -28,8 +28,9 @@ defmodule Jake.Object do
     if map["patternProperties"] do
       nlist =
         for {k, v} <- map["patternProperties"],
-            into: %{},
-            do: {Randex.stream(~r/#{k}/, mod: Randex.Generator.StreamData), Jake.gen_init(v)}
+            do: build_and_verify_patterns(k, v, map["patternProperties"])
+
+      merge_patterns(nlist)
     else
       if map["dependencies"] do
         decide_dep_and_properties(map)
@@ -37,6 +38,28 @@ defmodule Jake.Object do
         decide_min_max(map, Jake.gen_init(%{"type" => "string"}), StreamData.term(), min, max)
       end
     end
+  end
+
+  def merge_patterns(nlist) do
+    merge_maps = fn list -> Enum.reduce(list, %{}, fn x, acc -> Map.merge(acc, x) end) end
+
+    StreamData.bind(StreamData.fixed_list(nlist), fn list ->
+      StreamData.constant(merge_maps.(list))
+    end)
+  end
+
+  def build_and_verify_patterns(key, value, pprop) do
+    pprop_schema = %{"patternProperties" => pprop}
+    IO.inspect(pprop_schema)
+    nkey = Randex.stream(~r/#{key}/, mod: Randex.Generator.StreamData)
+    nval = Jake.gen_init(value)
+
+    StreamData.bind(nkey, fn k ->
+      StreamData.bind_filter(nval, fn v ->
+        result = ExJsonSchema.Validator.valid?(pprop_schema, %{k => v})
+        if result, do: {:cont, StreamData.constant(%{k => v})}, else: :skip
+      end)
+    end)
   end
 
   def gen_with_no_prop(map) do
@@ -107,6 +130,7 @@ defmodule Jake.Object do
     map = Map.put(map, "properties", pmap)
     new_prop = for {k, v} <- pmap, into: %{}, do: fn_not_check.(k, v)
     new_prop = if new_prop["null"] == "null", do: Map.drop(new_prop, ["null"]), else: new_prop
+
     req =
       if map["required"] do
         for n <- map["required"], into: %{}, do: {n, Map.get(new_prop, n)}
@@ -167,7 +191,6 @@ defmodule Jake.Object do
   def create_dep_list_map(new_prop, dep) do
     dep_list = for {k, v} <- dep, do: k
     {dep_map, non_dep_map} = Map.split(new_prop, dep_list)
-    # IO.inspect(non_dep_map)
 
     list_with_map =
       for {k, v} <- dep do
