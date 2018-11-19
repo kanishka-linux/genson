@@ -98,9 +98,15 @@ defmodule Jake.Object do
         properties
       end
 
-    map = Map.put(map, "properties", pmap)
-    new_prop = for {k, v} <- pmap, into: %{}, do: {k, Jake.gen_init(v)}
+    fn_not_check = fn k, v ->
+      if v["not"] != nil and is_map(v["not"]) and map_size(v["not"]) == 0,
+        do: {"null", "null"},
+        else: {k, Jake.gen_init(v)}
+    end
 
+    map = Map.put(map, "properties", pmap)
+    new_prop = for {k, v} <- pmap, into: %{}, do: fn_not_check.(k, v)
+    new_prop = if new_prop["null"] == "null", do: Map.drop(new_prop, ["null"]), else: new_prop
     req =
       if map["required"] do
         for n <- map["required"], into: %{}, do: {n, Map.get(new_prop, n)}
