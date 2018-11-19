@@ -252,6 +252,13 @@ defmodule JakeTestProperty do
     test_generator_property(jschema)
   end
 
+  property "test enum with constraints" do
+    jschema =
+      ~s({"type": ["integer", "string"], "enum": [1, 2, "four", "hello", -3, "worlds", null, true], "minimum": -1, "minLength": 5})
+
+    test_generator_property(jschema)
+  end
+
   property "test boolean" do
     jschema = ~s({"type": "boolean"})
     test_generator_property(jschema)
