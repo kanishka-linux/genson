@@ -96,7 +96,7 @@ defmodule Jake do
 
   def gen_all(map, enum, type) when type in @types, do: gen_type(type, map)
 
-  def gen_all(map, enum, type) when enum != nil, do: gen_enum(enum, type)
+  def gen_all(map, enum, type) when enum != nil, do: gen_enum(map, enum, type)
 
   def gen_all(map, enum, type) when type == nil do
     Jake.Notype.gen_notype(map, type)
@@ -126,7 +126,7 @@ defmodule Jake do
     Jake.Object.gen_object(map, type)
   end
 
-  def gen_enum(list, type) do
+  def gen_enum(map, list, type) do
     nlist =
       case type do
         x when x == "integer" ->
@@ -148,7 +148,8 @@ defmodule Jake do
           list
       end
 
-    IO.inspect(nlist)
-    StreamData.member_of(nlist)
+    nmap = Map.drop(map, ["enum"])
+    Enum.filter(nlist, fn x -> ExJsonSchema.Validator.valid?(nmap, x) end)
+    |> StreamData.member_of()
   end
 end
