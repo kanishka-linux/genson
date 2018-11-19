@@ -32,7 +32,11 @@ defmodule Jake.Notype do
         x, acc when is_nil(x) -> acc
       end)
 
-    nmap = if not is_nil(types), do: Map.put(nmap, "type", types), else: nmap
-    if nmap["type"], do: Jake.gen_init(nmap)
+    if type == nil do
+      nmap = if not is_nil(types), do: Map.put(nmap, "type", types), else: nmap
+      if nmap["type"], do: Jake.gen_init(nmap)
+    else
+      types
+    end
   end
 end
