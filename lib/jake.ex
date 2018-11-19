@@ -66,6 +66,24 @@ defmodule Jake do
     |> Jake.gen_init()
   end
 
+  def gen_init(%{"not" => not_schema} = map) when is_map(not_schema) do
+    type_val =
+      if not_schema["type"] do
+        not_schema["type"]
+      else
+        Jake.Notype.gen_notype(not_schema, "return type")
+      end
+
+    type = if type_val == nil, do: "null", else: type_val
+    nlist = if is_list(type), do: @types -- type, else: @types -- [type]
+    data = for(n <- nlist, do: Jake.gen_init(%{"type" => n})) |> StreamData.one_of()
+
+    StreamData.filter(data, fn
+      x when type == "null" -> true
+      x -> not ExJsonSchema.Validator.valid?(not_schema, x)
+    end)
+  end
+
   def gen_init(map) do
     gen_all(map, map["enum"], map["type"])
   end
