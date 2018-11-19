@@ -15,7 +15,7 @@ defmodule Jake.Number do
     {min, max}
   end
 
-  def gen_number_init(map, enum, type) when is_list(enum), do: Jake.gen_enum(enum, type)
+  def gen_number_init(map, enum, type) when is_list(enum), do: Jake.gen_enum(map, enum, type)
 
   def gen_number_init(map, enum, type) when type in ["integer", "number"] do
     {min_i, max_i} = get_min_max(map)

@@ -27,7 +27,7 @@ defmodule Jake.Array do
 
   def gen_array(map, _type), do: arraytype(map, map["enum"], map["items"])
 
-  def arraytype(map, enum, items) when enum != nil, do: Jake.gen_enum(enum, "array")
+  def arraytype(map, enum, items) when enum != nil, do: Jake.gen_enum(map, enum, "array")
 
   def arraytype(map, enum, items) when is_nil(items) and is_nil(enum) do
     item = get_one_of()

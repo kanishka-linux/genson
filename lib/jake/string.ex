@@ -17,7 +17,7 @@ defmodule Jake.String do
   end
 
   def stringer(map, enum, pattern) when is_list(enum) do
-    Jake.gen_enum(map["enum"], "string")
+    Jake.gen_enum(map, map["enum"], "string")
   end
 
   def stringer(map, enum, pattern) when is_binary(pattern) do

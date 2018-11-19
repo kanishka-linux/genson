@@ -20,7 +20,7 @@ defmodule Jake.Object do
 
   def gen_object(map, type), do: objectype(map, map["enum"], map["properties"])
 
-  def objectype(map, enum, properties) when enum != nil, do: Jake.gen_enum(enum, "object")
+  def objectype(map, enum, properties) when enum != nil, do: Jake.gen_enum(map, enum, "object")
 
   def objectype(map, enum, properties) when is_nil(properties) and is_nil(enum) do
     {min, max} = get_min_max(map)
