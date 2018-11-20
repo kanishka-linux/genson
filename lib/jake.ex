@@ -72,16 +72,7 @@ defmodule Jake do
   end
 
   def gen_enum(map, list, type) do
-    check_type = fn type, x -> @type_map[type] |> apply([x]) end
-
-    nlist =
-      if type in @types do
-        for n <- list, check_type.(type, n), do: n
-      else
-        list
-      end
-
-    Enum.filter(nlist, fn x -> ExJsonSchema.Validator.valid?(map, x) end)
+    Enum.filter(list, fn x -> ExJsonSchema.Validator.valid?(map, x) end)
     |> StreamData.member_of()
   end
 end
