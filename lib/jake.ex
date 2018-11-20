@@ -9,6 +9,15 @@ defmodule Jake do
     "string"
   ]
 
+  @type_map %{
+    "number" => &Kernel.is_number/1,
+    "integer" => &Kernel.is_integer/1,
+    "string" => &Kernel.is_binary/1,
+    "array" => &Kernel.is_list/1,
+    "object" => &Kernel.is_map/1,
+    "boolean" => &Kernel.is_boolean/1
+  }
+
   def generator(jschema) do
     IO.puts(jschema)
     jschema |> Poison.decode!() |> gen_init()
@@ -63,25 +72,13 @@ defmodule Jake do
   end
 
   def gen_enum(map, list, type) do
+    check_type = fn type, x -> @type_map[type] |> apply([x]) end
+
     nlist =
-      case type do
-        x when x == "integer" ->
-          nlist = for n <- list, is_integer(n), do: n
-
-        x when x == "number" ->
-          for n <- list, is_number(n), do: n
-
-        x when x == "string" ->
-          for n <- list, is_binary(n), do: n
-
-        x when x == "array" ->
-          for n <- list, is_list(n), do: n
-
-        x when x == "object" ->
-          for n <- list, is_map(n), do: n
-
-        _ ->
-          list
+      if type in @types do
+        for n <- list, check_type.(type, n), do: n
+      else
+        list
       end
 
     Enum.filter(nlist, fn x -> ExJsonSchema.Validator.valid?(map, x) end)
