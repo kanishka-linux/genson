@@ -1,13 +1,4 @@
 defmodule Jake.Object do
-  @type_list [
-    %{"type" => "integer"},
-    %{"type" => "number"},
-    %{"type" => "boolean"},
-    %{"type" => "string"},
-    %{"type" => "null"},
-    nil
-  ]
-
   @min_properties 0
 
   @max_properties 1000
@@ -18,11 +9,7 @@ defmodule Jake.Object do
     {min, max}
   end
 
-  def gen_object(map, type), do: objectype(map, map["enum"], map["properties"])
-
-  def objectype(map, enum, properties) when enum != nil, do: Jake.gen_enum(map, enum, "object")
-
-  def objectype(map, enum, properties) when is_nil(properties) and is_nil(enum) do
+  def gen_object(map, properties) when is_nil(properties) do
     {min, max} = get_min_max(map)
 
     if map["patternProperties"] do
@@ -37,6 +24,44 @@ defmodule Jake.Object do
       else
         decide_min_max(map, Jake.gen_init(%{"type" => "string"}), StreamData.term(), min, max)
       end
+    end
+  end
+
+  def gen_object(map, properties) when is_map(properties) do
+    nproperties = check_pattern_properties(map, properties, map["patternProperties"])
+
+    pmap =
+      if nproperties != nil and is_list(nproperties) do
+        nlist = for n <- nproperties, length(n) > 0, do: Enum.fetch!(n, 0)
+        Enum.reduce(nlist, %{}, fn x, acc -> Map.merge(x, acc) end)
+      else
+        properties
+      end
+
+    fn_not_check = fn k, v ->
+      if v["not"] != nil and is_map(v["not"]) and map_size(v["not"]) == 0,
+        do: {"null", "null"},
+        else: {k, Jake.gen_init(v)}
+    end
+
+    map = Map.put(map, "properties", pmap)
+    new_prop = for {k, v} <- pmap, into: %{}, do: fn_not_check.(k, v)
+    new_prop = if new_prop["null"] == "null", do: Map.drop(new_prop, ["null"]), else: new_prop
+
+    req =
+      if map["required"] do
+        for n <- map["required"], into: %{}, do: {n, Map.get(new_prop, n)}
+      end
+
+    non_req =
+      if is_map(req) and map_size(req) > 0 do
+        for {k, v} <- new_prop, req[k] == nil, into: %{}, do: {k, v}
+      end
+
+    if is_nil(req) or map_size(req) == 0 do
+      check_additional_properties(map, 0, req, non_req, new_prop)
+    else
+      check_additional_properties(map, Map.size(req), req, non_req, new_prop)
     end
   end
 
@@ -106,45 +131,7 @@ defmodule Jake.Object do
 
       map = Map.put(map, "properties", properties) |> Map.put("dependencies", dependencies)
       IO.inspect(map)
-      objectype(map, nil, properties)
-    end
-  end
-
-  def objectype(map, enum, properties) when is_map(properties) do
-    nproperties = check_pattern_properties(map, properties, map["patternProperties"])
-
-    pmap =
-      if nproperties != nil and is_list(nproperties) do
-        nlist = for n <- nproperties, length(n) > 0, do: Enum.fetch!(n, 0)
-        Enum.reduce(nlist, %{}, fn x, acc -> Map.merge(x, acc) end)
-      else
-        properties
-      end
-
-    fn_not_check = fn k, v ->
-      if v["not"] != nil and is_map(v["not"]) and map_size(v["not"]) == 0,
-        do: {"null", "null"},
-        else: {k, Jake.gen_init(v)}
-    end
-
-    map = Map.put(map, "properties", pmap)
-    new_prop = for {k, v} <- pmap, into: %{}, do: fn_not_check.(k, v)
-    new_prop = if new_prop["null"] == "null", do: Map.drop(new_prop, ["null"]), else: new_prop
-
-    req =
-      if map["required"] do
-        for n <- map["required"], into: %{}, do: {n, Map.get(new_prop, n)}
-      end
-
-    non_req =
-      if is_map(req) and map_size(req) > 0 do
-        for {k, v} <- new_prop, req[k] == nil, into: %{}, do: {k, v}
-      end
-
-    if is_nil(req) or map_size(req) == 0 do
-      check_additional_properties(map, 0, req, non_req, new_prop)
-    else
-      check_additional_properties(map, Map.size(req), req, non_req, new_prop)
+      gen_object(map, properties)
     end
   end
 
@@ -292,14 +279,6 @@ defmodule Jake.Object do
     end
   end
 
-  def check_dependencies(map, non_req) do
-    if map["dependencies"] do
-      create_dep_list_map(non_req, map["dependencies"])
-    else
-      non_req
-    end
-  end
-
   def check_additional_properties(map, req_size, req, non_req, new_prop) when req_size > 0 do
     {min, max} = get_min_max(map)
 
@@ -326,10 +305,18 @@ defmodule Jake.Object do
     end
   end
 
+  def check_dependencies(map, non_req) do
+    if map["dependencies"] do
+      create_dep_list_map(non_req, map["dependencies"])
+    else
+      non_req
+    end
+  end
+
   def decide_min_max(map, key, value, min, max)
       when is_integer(min) and is_integer(max) and min <= max do
     if map["additionalProperties"] != nil do
-      objectype(map, nil, %{})
+      gen_object(map, %{})
     else
       StreamData.map_of(key, value, min_length: min, max_length: max)
     end
