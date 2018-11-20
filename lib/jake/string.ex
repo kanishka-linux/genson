@@ -3,24 +3,18 @@ defmodule Jake.String do
 
   @strlen_max 100
 
-  def gen_string(map), do: stringer(map, map["enum"], map["pattern"])
-
   def find_min_max(map) do
     min = Map.get(map, "minLength", @strlen_min)
     max = Map.get(map, "maxLength", @strlen_max)
     {min, max}
   end
 
-  def stringer(map, enum, pattern) when is_nil(enum) and is_nil(pattern) do
+  def gen_string(map, pattern) when is_nil(pattern) do
     {min, max} = find_min_max(map)
     StreamData.string(:alphanumeric, [{:max_length, max}, {:min_length, min}])
   end
 
-  def stringer(map, enum, pattern) when is_list(enum) do
-    Jake.gen_enum(map, map["enum"], "string")
-  end
-
-  def stringer(map, enum, pattern) when is_binary(pattern) do
+  def gen_string(map, pattern) when is_binary(pattern) do
     {min, max} = find_min_max(map)
     pat = Randex.stream(~r/#{pattern}/, mod: Randex.Generator.StreamData)
 
