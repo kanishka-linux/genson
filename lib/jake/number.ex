@@ -5,19 +5,13 @@ defmodule Jake.Number do
 
   @max_mult 100
 
-  def gen_number(map, type) do
-    gen_number_init(map, map["enum"], type)
-  end
-
   def get_min_max(map) do
     min = Map.get(map, "minimum", @num_min)
     max = Map.get(map, "maximum", @num_max)
     {min, max}
   end
 
-  def gen_number_init(map, enum, type) when is_list(enum), do: Jake.gen_enum(map, enum, type)
-
-  def gen_number_init(map, enum, type) when type in ["integer", "number"] do
+  def gen_number(map, type) do
     {min_i, max_i} = get_min_max(map)
     {step_left, step_right} = find_step(map, min_i, max_i)
     min = findmin(map, @num_min, step_left, type)
