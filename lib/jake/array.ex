@@ -12,7 +12,7 @@ defmodule Jake.Array do
 
   @max_items 1000
 
-  def gen_array(%{"items" => items} = map, _type) do
+  def gen_array(%{"items" => items} = map) do
     case items do
       item when is_map(item) ->
         gen_list(map, item)
@@ -25,11 +25,9 @@ defmodule Jake.Array do
     end
   end
 
-  def gen_array(map, _type), do: arraytype(map, map["enum"], map["items"])
+  def gen_array(map), do: arraytype(map, map["items"])
 
-  def arraytype(map, enum, items) when enum != nil, do: Jake.gen_enum(map, enum, "array")
-
-  def arraytype(map, enum, items) when is_nil(items) and is_nil(enum) do
+  def arraytype(map, items) when is_nil(items) do
     item = get_one_of()
     {min, max} = get_min_max(map)
     decide_min_max(map, item, min, max)
