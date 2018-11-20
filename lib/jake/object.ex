@@ -225,7 +225,7 @@ defmodule Jake.Object do
              when map_size(mapn) in y..z ->
                {:cont, StreamData.constant(mapn)}
 
-             nmap when true ->
+             _ ->
                :skip
            end)}
 
@@ -253,7 +253,7 @@ defmodule Jake.Object do
             when map_size(mapn) in y..z ->
               {:cont, StreamData.constant(mapn)}
 
-            nmap when true ->
+            _ ->
               :skip
           end)
       end
