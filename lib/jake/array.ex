@@ -12,38 +12,38 @@ defmodule Jake.Array do
 
   @max_items 1000
 
-  def gen_array(%{"items" => items} = map) do
+  def gen_array(%{"items" => items} = map, omap) do
     case items do
       item when is_map(item) ->
-        gen_list(map, item)
+        gen_list(map, item, omap)
 
       item when is_list(item) ->
-        gen_tuple(map, item)
+        gen_tuple(map, item, omap)
 
       _ ->
         raise "Invalid items in array"
     end
   end
 
-  def gen_array(map), do: arraytype(map, map["items"])
+  def gen_array(map, omap), do: arraytype(map, map["items"], omap)
 
-  def arraytype(map, items) when is_nil(items) do
-    item = get_one_of()
+  def arraytype(map, items, omap) when is_nil(items) do
+    item = get_one_of(omap)
     {min, max} = get_min_max(map)
     decide_min_max(map, item, min, max)
   end
 
-  def gen_tuple(map, items) do
-    list = for n <- items, is_map(n), do: Jake.gen_init(n)
+  def gen_tuple(map, items, omap) do
+    list = for n <- items, is_map(n), do: Jake.gen_init(n, omap)
 
     {min, max} = get_min_max(map)
 
     case map["additionalItems"] do
       x when is_map(x) ->
-        add_additional_items(list, Jake.gen_init(x), max, min)
+        add_additional_items(list, Jake.gen_init(x, omap), max, min)
 
       x when (is_boolean(x) and x) or is_nil(x) ->
-        add_additional_items(list, get_one_of(), max, min)
+        add_additional_items(list, get_one_of(omap), max, min)
 
       x when is_boolean(x) and not x and length(list) in min..max ->
         StreamData.fixed_list(list)
@@ -53,9 +53,9 @@ defmodule Jake.Array do
     end
   end
 
-  def gen_list(map, items) do
+  def gen_list(map, items, omap) do
     {min, max} = get_min_max(map)
-    item = Jake.gen_init(items)
+    item = Jake.gen_init(items, omap)
     decide_min_max(map, item, min, max)
   end
 
@@ -78,8 +78,8 @@ defmodule Jake.Array do
     raise "Bounds of items not well defined"
   end
 
-  def get_one_of() do
-    for(n <- @type_list, is_map(n), do: Jake.gen_init(n)) |> StreamData.one_of()
+  def get_one_of(omap) do
+    for(n <- @type_list, is_map(n), do: Jake.gen_init(n, omap)) |> StreamData.one_of()
   end
 
   def add_additional_items(olist, additional, max, min) do
