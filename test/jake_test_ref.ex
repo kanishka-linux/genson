@@ -81,4 +81,30 @@ defmodule JakeTestRef do
             "additionalProperties": false})
     test_generator_property(jschema)
   end
+  
+  property "test complex ref" do
+    jschema = ~s({ "definitions": {
+                        "address": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "street_address": { "type": "string" },
+                            "city":           { "type": "string" },
+                            "state":          { "type": "string" }
+                          },
+                          "required": ["street_address", "city", "state"]
+                        }
+                      },
+
+                      "type": "object",
+
+                      "properties": {
+                        "billing_address": { "$ref": "#/definitions/address" },
+                        "shipping_address": { "$ref": "#/definitions/address" }
+                      },
+                      "additionalProperties": false
+                })
+    test_generator_property(jschema)
+  end
+  
 end
