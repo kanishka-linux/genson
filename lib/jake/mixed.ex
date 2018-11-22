@@ -9,14 +9,14 @@ defmodule Jake.Mixed do
     "string"
   ]
 
-  def gen_mixed(%{"anyOf" => options} = map) when is_list(options) do
+  def gen_mixed(%{"anyOf" => options} = map, omap) when is_list(options) do
     nmap = Map.drop(map, ["anyOf"])
 
-    for(n <- options, is_map(n), do: Jake.gen_init(Map.merge(nmap, n)))
+    for(n <- options, is_map(n), do: Jake.gen_init(Map.merge(nmap, n), omap))
     |> StreamData.one_of()
   end
 
-  def gen_mixed(%{"oneOf" => options} = map) when is_list(options) do
+  def gen_mixed(%{"oneOf" => options} = map, omap) when is_list(options) do
     nmap = Map.drop(map, ["oneOf"])
 
     tail_schema = fn tail ->
@@ -25,12 +25,38 @@ defmodule Jake.Mixed do
 
     nlist =
       for {n, counter} <- Enum.with_index(options) do
-        hd = Map.merge(nmap, n) |> Jake.gen_init()
+        hd = Map.merge(nmap, n) |> Jake.gen_init(omap)
         tail = List.delete_at(options, counter) |> tail_schema.()
         {hd, tail}
       end
 
     try_one_of(nlist, 0)
+  end
+
+  def gen_mixed(%{"allOf" => options} = map, omap) when is_list(options) do
+    nmap = Map.drop(map, ["allOf"])
+
+    Enum.reduce(options, %{}, fn x, acc -> Jake.MapUtil.deep_merge(acc, x) end)
+    |> Jake.MapUtil.deep_merge(nmap)
+    |> Jake.gen_init(omap)
+  end
+
+  def gen_mixed(%{"not" => not_schema} = map, omap) when is_map(not_schema) do
+    type_val =
+      if not_schema["type"] do
+        not_schema["type"]
+      else
+        Jake.Notype.gen_notype(not_schema, "return type", omap)
+      end
+
+    type = if type_val == nil, do: "null", else: type_val
+    nlist = if is_list(type), do: @types -- type, else: @types -- [type]
+    data = for(n <- nlist, do: Jake.gen_init(%{"type" => n}, omap)) |> StreamData.one_of()
+
+    StreamData.filter(data, fn
+      x when type == "null" -> true
+      x -> not ExJsonSchema.Validator.valid?(not_schema, x)
+    end)
   end
 
   def try_one_of(nlist, index) do
@@ -51,31 +77,5 @@ defmodule Jake.Mixed do
     else
       raise "oneOf combination not possible"
     end
-  end
-
-  def gen_mixed(%{"allOf" => options} = map) when is_list(options) do
-    nmap = Map.drop(map, ["allOf"])
-
-    Enum.reduce(options, %{}, fn x, acc -> Jake.MapUtil.deep_merge(acc, x) end)
-    |> Jake.MapUtil.deep_merge(nmap)
-    |> Jake.gen_init()
-  end
-
-  def gen_mixed(%{"not" => not_schema} = map) when is_map(not_schema) do
-    type_val =
-      if not_schema["type"] do
-        not_schema["type"]
-      else
-        Jake.Notype.gen_notype(not_schema, "return type")
-      end
-
-    type = if type_val == nil, do: "null", else: type_val
-    nlist = if is_list(type), do: @types -- type, else: @types -- [type]
-    data = for(n <- nlist, do: Jake.gen_init(%{"type" => n})) |> StreamData.one_of()
-
-    StreamData.filter(data, fn
-      x when type == "null" -> true
-      x -> not ExJsonSchema.Validator.valid?(not_schema, x)
-    end)
   end
 end
