@@ -11,7 +11,7 @@ defmodule Jake.Number do
     {min, max}
   end
 
-  def gen_number(map, type) do
+  def gen_number(map, type, omap) do
     {min_i, max_i} = get_min_max(map)
     {step_left, step_right} = find_step(map, min_i, max_i)
     min = findmin(map, @num_min, step_left, type)
