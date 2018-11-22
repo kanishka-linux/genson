@@ -14,8 +14,12 @@ defmodule Jake.Ref do
       else
         process_local_path(uri) |> get_head_list_path(omap)
       end
-
-    nmap = Map.merge(nmap, ref_map)
+    nmap = 
+    if ref_map != nil do
+        Map.merge(nmap, ref_map)
+    else
+        nmap
+    end
     nref = nmap["$ref"]
     if nref, do: expand_ref(nref, nmap, omap), else: nmap
   end
@@ -53,10 +57,9 @@ defmodule Jake.Ref do
       else
         [url, nil]
       end
-
-    {:ok, {{_, 200, _}, _, schema}} = :httpc.request(:get, {url, []}, [], [])
+    IO.inspect {url, local}
+    {:ok, {{_, 200, _}, _, schema}} = :httpc.request(:get, {to_charlist(url), []}, [], [])
     jschema = Poison.decode!(schema)
-
     if is_nil(local) do
       jschema
     else
