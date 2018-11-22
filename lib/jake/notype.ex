@@ -22,7 +22,7 @@ defmodule Jake.Notype do
     "maxProperties" => "object"
   }
 
-  def gen_notype(map, type) do
+  def gen_notype(map, type, omap) do
     nmap = for {k, v} <- map, into: %{}, do: {k, v}
     nlist = for {k, v} <- map, into: [], do: @prop[k]
 
@@ -34,7 +34,7 @@ defmodule Jake.Notype do
 
     if type == nil do
       nmap = if not is_nil(types), do: Map.put(nmap, "type", types), else: nmap
-      if nmap["type"], do: Jake.gen_init(nmap)
+      if nmap["type"], do: Jake.gen_init(nmap, omap)
     else
       types
     end
