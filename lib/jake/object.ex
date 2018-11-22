@@ -9,25 +9,32 @@ defmodule Jake.Object do
     {min, max}
   end
 
-  def gen_object(map, properties) when is_nil(properties) do
+  def gen_object(map, properties, omap) when is_nil(properties) do
     {min, max} = get_min_max(map)
 
     if map["patternProperties"] do
       nlist =
         for {k, v} <- map["patternProperties"],
-            do: build_and_verify_patterns(k, v, map["patternProperties"])
+            do: build_and_verify_patterns(k, v, map["patternProperties"], omap)
 
       merge_patterns(nlist)
     else
       if map["dependencies"] do
-        decide_dep_and_properties(map)
+        decide_dep_and_properties(map, omap)
       else
-        decide_min_max(map, Jake.gen_init(%{"type" => "string"}), StreamData.term(), min, max)
+        decide_min_max(
+          map,
+          Jake.gen_init(%{"type" => "string"}, omap),
+          StreamData.term(),
+          min,
+          max,
+          omap
+        )
       end
     end
   end
 
-  def gen_object(map, properties) when is_map(properties) do
+  def gen_object(map, properties, omap) when is_map(properties) do
     nproperties = check_pattern_properties(map, properties, map["patternProperties"])
 
     pmap =
@@ -41,7 +48,7 @@ defmodule Jake.Object do
     fn_not_check = fn k, v ->
       if v["not"] != nil and is_map(v["not"]) and map_size(v["not"]) == 0,
         do: {"null", "null"},
-        else: {k, Jake.gen_init(v)}
+        else: {k, Jake.gen_init(v, omap)}
     end
 
     map = Map.put(map, "properties", pmap)
@@ -59,9 +66,9 @@ defmodule Jake.Object do
       end
 
     if is_nil(req) or map_size(req) == 0 do
-      check_additional_properties(map, 0, req, non_req, new_prop)
+      check_additional_properties(map, 0, req, non_req, new_prop, omap)
     else
-      check_additional_properties(map, Map.size(req), req, non_req, new_prop)
+      check_additional_properties(map, Map.size(req), req, non_req, new_prop, omap)
     end
   end
 
@@ -73,28 +80,32 @@ defmodule Jake.Object do
     end)
   end
 
-  def build_and_verify_patterns(key, value, pprop) do
+  def build_and_verify_patterns(key, value, pprop, omap) do
     pprop_schema = %{"patternProperties" => pprop}
     IO.inspect(pprop_schema)
     nkey = Randex.stream(~r/#{key}/, mod: Randex.Generator.StreamData)
-    nval = Jake.gen_init(value)
+    nval = Jake.gen_init(value, omap)
 
     StreamData.bind(nkey, fn k ->
-      StreamData.bind_filter(nval, fn v ->
-        result = ExJsonSchema.Validator.valid?(pprop_schema, %{k => v})
-        if result, do: {:cont, StreamData.constant(%{k => v})}, else: :skip
-      end)
+      StreamData.bind_filter(
+        nval,
+        fn v ->
+          result = ExJsonSchema.Validator.valid?(pprop_schema, %{k => v})
+          if result, do: {:cont, StreamData.constant(%{k => v})}, else: :skip
+        end,
+        100
+      )
     end)
   end
 
-  def gen_with_no_prop(map) do
+  def gen_with_no_prop(map, omap) do
     {min, max} = get_min_max(map)
 
-    Jake.gen_init(%{"type" => "string"})
+    Jake.gen_init(%{"type" => "string"}, omap)
     |> StreamData.map_of(StreamData.term(), min_length: min, max_length: max)
   end
 
-  def decide_dep_and_properties(map) do
+  def decide_dep_and_properties(map, omap) do
     dep = map["dependencies"]
 
     list_with_map =
@@ -111,13 +122,13 @@ defmodule Jake.Object do
         end
       end
 
-    resolve_dep(map, list_with_map)
+    resolve_dep(map, list_with_map, omap)
   end
 
-  def resolve_dep(map, list_with_map) do
+  def resolve_dep(map, list_with_map, omap) do
     if is_map(List.first(list_with_map)) do
       properties = Enum.reduce(list_with_map, %{}, fn x, acc -> Map.merge(acc, x) end)
-      check_additional_properties(map, 0, nil, nil, properties)
+      check_additional_properties(map, 0, nil, nil, properties, omap)
     else
       dependencies =
         for({k, prop_list, prop_map} <- list_with_map, do: %{k => prop_list})
@@ -131,7 +142,7 @@ defmodule Jake.Object do
 
       map = Map.put(map, "properties", properties) |> Map.put("dependencies", dependencies)
       IO.inspect(map)
-      gen_object(map, properties)
+      gen_object(map, properties, omap)
     end
   end
 
@@ -247,13 +258,13 @@ defmodule Jake.Object do
     )
   end
 
-  def check_additional_properties(map, req_size, req, _non_req, new_prop)
+  def check_additional_properties(map, req_size, req, _non_req, new_prop, omap)
       when is_nil(req) or req_size == 0 do
     {min, max} = get_min_max(map)
 
     case {map["additionalProperties"], min, max} do
       {x, y, z} when is_nil(x) or (is_boolean(x) and x) ->
-        additional = gen_with_no_prop(map)
+        additional = gen_with_no_prop(map, omap)
 
         check_dependencies(map, new_prop)
         |> bind_function(additional, y, z)
@@ -271,20 +282,21 @@ defmodule Jake.Object do
         StreamData.filter(prop, fn nmap -> map_size(nmap) in y..z end)
 
       {x, y, z} when is_map(x) ->
-        obj = Jake.gen_init(x)
-        key = Jake.gen_init(%{"type" => "string"})
+        obj = Jake.gen_init(x, omap)
+        key = Jake.gen_init(%{"type" => "string"}, omap)
 
         check_dependencies(map, new_prop)
         |> bind_function(StreamData.map_of(key, obj), y, z)
     end
   end
 
-  def check_additional_properties(map, req_size, req, non_req, new_prop) when req_size > 0 do
+  def check_additional_properties(map, req_size, req, non_req, new_prop, omap)
+      when req_size > 0 do
     {min, max} = get_min_max(map)
 
     case {map["additionalProperties"], min, max} do
       {x, y, z} when is_nil(x) or (is_boolean(x) and x) ->
-        additional = gen_with_no_prop(map)
+        additional = gen_with_no_prop(map, omap)
 
         check_dependencies(map, non_req)
         |> bind_function(additional, y, z)
@@ -295,8 +307,8 @@ defmodule Jake.Object do
         |> bind_function_req(req, y, z)
 
       {x, y, z} when is_map(x) ->
-        obj = Jake.gen_init(x)
-        key = Jake.gen_init(%{"type" => "string"})
+        obj = Jake.gen_init(x, omap)
+        key = Jake.gen_init(%{"type" => "string"}, omap)
         val1 = StreamData.map_of(key, obj, min_length: y, max_length: z)
 
         check_dependencies(map, non_req)
@@ -313,10 +325,10 @@ defmodule Jake.Object do
     end
   end
 
-  def decide_min_max(map, key, value, min, max)
+  def decide_min_max(map, key, value, min, max, omap)
       when is_integer(min) and is_integer(max) and min <= max do
     if map["additionalProperties"] != nil do
-      gen_object(map, %{})
+      gen_object(map, %{}, omap)
     else
       StreamData.map_of(key, value, min_length: min, max_length: max)
     end
