@@ -81,7 +81,39 @@ defmodule JakeTestRef do
             "additionalProperties": false})
     test_generator_property(jschema)
   end
-  
+
+  property "test ref simple recursive" do
+    jschema = ~s({"properties": {
+                "foo_bar" : {"type":"integer"}, 
+                "bar" : {"$ref": "#/properties"},
+                "foo": {"$ref": "#/properties/bar"}
+            },
+            "additionalProperties": false})
+    test_generator_property(jschema)
+  end
+
+  property "test ref complex recursive" do
+    jschema = ~s({"definitions": {
+                    "person": {
+                      "type": "object",
+                      "properties": {
+                        "name": { "type": "string" },
+                        "children": {
+                          "type": "array",
+                          "items": { "$ref": "#/definitions/person" }
+                          
+                        }
+                      }, "required" : ["name"], "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "properties": {
+                    "person": { "$ref": "#/definitions/person" }
+                  }, "required": ["person"], "additionalProperties": false
+                })
+    test_generator_property(jschema)
+  end
+
   property "test complex ref" do
     jschema = ~s({ "definitions": {
                         "address": {
@@ -106,5 +138,4 @@ defmodule JakeTestRef do
                 })
     test_generator_property(jschema)
   end
-  
 end
