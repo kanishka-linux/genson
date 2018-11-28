@@ -103,13 +103,35 @@ defmodule JakeTestRef do
                           "items": { "$ref": "#/definitions/person" }
                           
                         }
-                      }, "required" : ["name"], "additionalProperties": false
+                      }, "required": ["name"], "additionalProperties": false
                     }
                   },
                   "type": "object",
                   "properties": {
                     "person": { "$ref": "#/definitions/person" }
                   }, "required": ["person"], "additionalProperties": false
+                })
+    test_generator_property(jschema)
+  end
+  
+  property "test ref complex recursive no required" do
+    jschema = ~s({"definitions": {
+                    "person": {
+                      "type": "object",
+                      "properties": {
+                        "name": { "type": "string" },
+                        "children": {
+                          "type": "array",
+                          "items": { "$ref": "#/definitions/person" }
+                          
+                        }
+                      }, "additionalProperties": false
+                    }
+                  },
+                  "type": "object",
+                  "properties": {
+                    "person": { "$ref": "#/definitions/person" }
+                  }, "additionalProperties": false
                 })
     test_generator_property(jschema)
   end
