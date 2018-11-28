@@ -14,6 +14,9 @@ defmodule Jake.Array do
 
   def gen_array(%{"items" => items} = map, omap) do
     case items do
+      item when is_map(item) and map_size(item) == 0 ->
+        StreamData.constant([])
+
       item when is_map(item) ->
         gen_list(map, item, omap)
 
