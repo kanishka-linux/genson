@@ -1,10 +1,10 @@
 defmodule Jake.Ref do
-  def expand_ref(ref, map, _omap)
+  def expand_ref(ref, map, _omap, _check_ref)
       when is_nil(ref) or is_map(ref) or ref == "#" do
     map
   end
 
-  def expand_ref(ref, map, omap) when is_binary(ref) do
+  def expand_ref(ref, map, omap, check_ref) when is_binary(ref) do
     nmap = Map.drop(map, ["$ref"])
     uri = URI.decode(ref)
 
@@ -21,8 +21,11 @@ defmodule Jake.Ref do
       else
         nmap
       end
-
-    check_ref_string(nmap, omap, [], ref)
+    if check_ref do
+        check_ref_string(nmap, omap, [], ref)
+    else
+        nmap
+    end
   end
 
   def check_ref_string(nmap, omap, ref_list, ref) do
