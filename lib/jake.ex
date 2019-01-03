@@ -16,7 +16,6 @@ defmodule Jake do
   end
 
   def gen_init(map, omap, size) do
-    IO.inspect size
     {map, size} = 
     if size == 0 do
         map = Jake.Ref.expand_ref(map["$ref"], map, omap, true)
