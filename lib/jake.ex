@@ -12,25 +12,30 @@ defmodule Jake do
   def generator(jschema) do
     IO.puts(jschema)
     map = jschema |> Poison.decode!()
-    StreamData.sized(fn size -> gen_init(map, map, 2*size) end)
+    StreamData.sized(fn size -> gen_init(map, map, 2 * size) end)
   end
 
   def gen_init(map, omap, size) do
-    {map, size} = 
-    if size == 0 do
+    {map, size} =
+      if size == 0 do
         map = Jake.Ref.expand_ref(map["$ref"], map, omap, true)
         {map, 0}
-    else
+      else
         map = Jake.Ref.expand_ref(map["$ref"], map, omap, false)
-        {map, trunc(size/2)}
-    end
-    gen =
-    if map["allOf"] || map["oneOf"] || map["anyOf"] || map["not"] do
-      Jake.Mixed.gen_mixed(map, omap, size)
-    else
-      gen_all(map, map["enum"], map["type"], omap, size)
-    end
-    StreamData.resize(gen, size)
+        {map, trunc(size / 2)}
+      end
+
+    StreamData.bind(
+      StreamData.constant(nil),
+      fn _ ->
+        if map["allOf"] || map["oneOf"] || map["anyOf"] || map["not"] do
+          Jake.Mixed.gen_mixed(map, omap, size)
+        else
+          gen_all(map, map["enum"], map["type"], omap, size)
+        end
+      end
+    )
+    |> StreamData.resize(size)
   end
 
   def gen_all(map, enum, _type, _omap, _size) when enum != nil, do: gen_enum(map, enum)
@@ -43,7 +48,8 @@ defmodule Jake do
     |> StreamData.one_of()
   end
 
-  def gen_all(map, _enum, type, omap, size) when type in @types, do: gen_type(type, map, omap, size)
+  def gen_all(map, _enum, type, omap, size) when type in @types,
+    do: gen_type(type, map, omap, size)
 
   def gen_all(map, _enum, type, omap, size) when type == nil do
     Jake.Notype.gen_notype(map, type, omap, size)
