@@ -12,7 +12,7 @@ defmodule Jake do
   def generator(jschema) do
     IO.puts(jschema)
     map = jschema |> Poison.decode!()
-    StreamData.sized(fn size -> gen_init(map, map, size) end)
+    StreamData.sized(fn size -> gen_init(map, map, 2*size) end)
   end
 
   def gen_init(map, omap, size) do
