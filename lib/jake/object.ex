@@ -83,7 +83,7 @@ defmodule Jake.Object do
 
   def build_and_verify_patterns(key, value, pprop, omap, size) do
     pprop_schema = %{"patternProperties" => pprop}
-    IO.inspect(pprop_schema)
+    # IO.inspect(pprop_schema)
     nkey = Randex.stream(~r/#{key}/, mod: Randex.Generator.StreamData)
     nval = Jake.gen_init(value, omap, size)
 
@@ -111,7 +111,7 @@ defmodule Jake.Object do
 
     list_with_map =
       for {k, v} <- dep do
-        IO.inspect(v)
+        # IO.inspect(v)
 
         if is_list(v) do
           item = %{k => StreamData.term()}
@@ -135,14 +135,14 @@ defmodule Jake.Object do
         for({k, prop_list, prop_map} <- list_with_map, do: %{k => prop_list})
         |> Enum.reduce(%{}, fn x, acc -> Map.merge(x, acc) end)
 
-      IO.inspect(dependencies)
+      # IO.inspect(dependencies)
 
       properties =
         for({k, prop_list, prop_map} <- list_with_map, do: prop_map)
         |> Enum.reduce(%{}, fn x, acc -> Map.merge(x, acc) end)
 
       map = Map.put(map, "properties", properties) |> Map.put("dependencies", dependencies)
-      IO.inspect(map)
+      # IO.inspect(map)
       gen_object(map, properties, omap, size)
     end
   end
@@ -167,7 +167,7 @@ defmodule Jake.Object do
         StreamData.optional_map(new_prop)
       end
 
-    IO.inspect(prop)
+    # IO.inspect(prop)
 
     StreamData.bind(prop, fn mapn ->
       StreamData.bind_filter(
