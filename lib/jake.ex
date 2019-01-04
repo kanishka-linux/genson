@@ -16,26 +16,28 @@ defmodule Jake do
   end
 
   def gen_init(map, omap, size) do
-    {map, size} =
-      if size == 0 do
-        map = Jake.Ref.expand_ref(map["$ref"], map, omap, true)
-        {map, 0}
-      else
-        map = Jake.Ref.expand_ref(map["$ref"], map, omap, false)
-        {map, trunc(size / 2)}
-      end
-
     StreamData.bind(
-      StreamData.constant(nil),
-      fn _ ->
-        if map["allOf"] || map["oneOf"] || map["anyOf"] || map["not"] do
-          Jake.Mixed.gen_mixed(map, omap, size)
+      get_lazy_streamkey(map, omap, size),
+      fn {nmap, nsize} ->
+        if nmap["allOf"] || nmap["oneOf"] || nmap["anyOf"] || nmap["not"] do
+          Jake.Mixed.gen_mixed(nmap, omap, nsize)
         else
-          gen_all(map, map["enum"], map["type"], omap, size)
+          gen_all(nmap, nmap["enum"], nmap["type"], omap, nsize)
         end
+        |> StreamData.resize(nsize)
       end
     )
-    |> StreamData.resize(size)
+  end
+
+  def get_lazy_streamkey(map, omap, size) do
+    if size == 0 do
+      map = Jake.Ref.expand_ref(map["$ref"], map, omap, true)
+      {map, 0}
+    else
+      map = Jake.Ref.expand_ref(map["$ref"], map, omap, false)
+      {map, trunc(size / 2)}
+    end
+    |> StreamData.constant()
   end
 
   def gen_all(map, enum, _type, _omap, _size) when enum != nil, do: gen_enum(map, enum)
