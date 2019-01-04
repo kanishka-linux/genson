@@ -21,10 +21,11 @@ defmodule Jake.Ref do
       else
         nmap
       end
+
     if check_ref do
-        check_ref_string(nmap, omap, [], ref)
+      check_ref_string(nmap, omap, [], ref)
     else
-        nmap
+      nmap
     end
   end
 

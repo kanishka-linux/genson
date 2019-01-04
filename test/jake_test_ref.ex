@@ -113,7 +113,7 @@ defmodule JakeTestRef do
                 })
     test_generator_property(jschema)
   end
-  
+
   property "test ref complex recursive no required" do
     jschema = ~s({"definitions": {
                     "person": {
