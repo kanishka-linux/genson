@@ -34,7 +34,7 @@ defmodule Jake.Notype do
 
     if type == nil do
       nmap = if not is_nil(types), do: Map.put(nmap, "type", types), else: nmap
-      if nmap["type"], do: Jake.gen_init(nmap, omap, size)
+      if nmap["type"] || nmap["$ref"], do: Jake.gen_init(nmap, omap, size)
     else
       types
     end
