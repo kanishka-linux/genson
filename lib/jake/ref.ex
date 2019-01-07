@@ -1,7 +1,7 @@
 defmodule Jake.Ref do
   def expand_ref(ref, map, _omap, _check_ref)
       when is_nil(ref) or is_map(ref) or ref == "#" do
-    map
+    {map, false}
   end
 
   def expand_ref(ref, map, omap, check_ref) when is_binary(ref) do
@@ -23,9 +23,9 @@ defmodule Jake.Ref do
       end
 
     if check_ref do
-      check_ref_string(nmap, omap, [], ref)
+      {check_ref_string(nmap, omap, [], ref), true}
     else
-      nmap
+      {nmap, true}
     end
   end
 
