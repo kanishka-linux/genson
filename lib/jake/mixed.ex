@@ -60,9 +60,13 @@ defmodule Jake.Mixed do
         for(n <- nlist, do: Jake.gen_init(%{"type" => n}, omap, size)) |> StreamData.one_of()
     end
 
-    StreamData.filter(data, fn
-      x when type == "null" -> true
-      x -> not ExJsonSchema.Validator.valid?(not_schema, x)
+    StreamData.filter(data,
+      fn x -> 
+        if type == "null" do
+            true
+        else
+            not ExJsonSchema.Validator.valid?(not_schema, x)
+        end
     end)
   end
 
