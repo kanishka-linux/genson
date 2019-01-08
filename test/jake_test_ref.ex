@@ -119,7 +119,7 @@ defmodule JakeTestRef do
                     "person": {
                       "type": "object",
                       "properties": {
-                        "name": { "type": "string" },
+                        "name": { "type": "string", "minLength": 5 },
                         "children": {
                           "type": "array",
                           "items": { "$ref": "#/definitions/person" }
