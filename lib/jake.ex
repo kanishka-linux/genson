@@ -30,15 +30,8 @@ defmodule Jake do
   end
 
   def get_lazy_streamkey(map, omap, size) do
-    if size == 0 do
-      {map, ref} = Jake.Ref.expand_ref(map["$ref"], map, omap, true)
-      {map, 0}
-    else
-      {map, ref} = Jake.Ref.expand_ref(map["$ref"], map, omap, false)
-      {map, trunc(size / 2)}
-    end
-    |>
-    StreamData.constant()
+    {map, ref} = Jake.Ref.expand_ref(map["$ref"], map, omap, false)
+    StreamData.constant({map, trunc(size / 2)})
   end
 
   def gen_all(map, enum, _type, _omap, _size) when enum != nil, do: gen_enum(map, enum)
