@@ -21,12 +21,7 @@ defmodule Jake.Ref do
       else
         nmap
       end
-
-    if check_ref do
-      {check_ref_string(nmap, omap, [], ref), true}
-    else
-      {nmap, true}
-    end
+    {nmap, true}
   end
 
   def check_ref_string(nmap, omap, ref_list, ref) do
