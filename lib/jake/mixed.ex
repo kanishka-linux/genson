@@ -42,6 +42,8 @@ defmodule Jake.Mixed do
   end
 
   def gen_mixed(%{"not" => not_schema} = map, omap, size) when is_map(not_schema) do
+    nmap = Map.drop(map, ["not"])
+    nmap_type = nmap["type"]
     type_val =
       if not_schema["type"] do
         not_schema["type"]
@@ -51,7 +53,12 @@ defmodule Jake.Mixed do
 
     type = if type_val == nil, do: "null", else: type_val
     nlist = if is_list(type), do: @types -- type, else: @types -- [type]
-    data = for(n <- nlist, do: Jake.gen_init(%{"type" => n}, omap, size)) |> StreamData.one_of()
+    data = 
+    if nmap_type || (is_map(nmap) && map_size(nmap) > 0) do
+        Jake.gen_init(nmap, omap, size)
+    else
+        for(n <- nlist, do: Jake.gen_init(%{"type" => n}, omap, size)) |> StreamData.one_of()
+    end
 
     StreamData.filter(data, fn
       x when type == "null" -> true
