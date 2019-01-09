@@ -20,7 +20,7 @@ defmodule Jake do
       get_lazy_streamkey(map, omap, size),
       fn {nmap, nsize} ->
         if nmap["allOf"] || nmap["oneOf"] || nmap["anyOf"] || nmap["not"] do
-e          Jake.Mixed.gen_mixed(nmap, omap, nsize)
+          Jake.Mixed.gen_mixed(nmap, omap, nsize)
         else
           gen_all(nmap, nmap["enum"], nmap["type"], omap, nsize)
         end
@@ -30,7 +30,7 @@ e          Jake.Mixed.gen_mixed(nmap, omap, nsize)
   end
 
   def get_lazy_streamkey(map, omap, size) do
-    {map, ref} = Jake.Ref.expand_ref(map["$ref"], map, omap)
+    {map, _} = Jake.Ref.expand_ref(map["$ref"], map, omap)
     StreamData.constant({map, trunc(size / 2)})
   end
 
@@ -51,7 +51,7 @@ e          Jake.Mixed.gen_mixed(nmap, omap, nsize)
     Jake.Notype.gen_notype(map, type, omap, size)
   end
 
-  def gen_type(type, map, omap, size) when type == "string" do
+  def gen_type(type, map, _omap, size) when type == "string" do
     Jake.String.gen_string(map, map["pattern"], size)
   end
 
