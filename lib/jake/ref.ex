@@ -29,46 +29,6 @@ defmodule Jake.Ref do
     {nmap, true}
   end
 
-  def check_ref_string(nmap, omap, ref_list, ref) do
-    if ref in ref_list do
-      str = Poison.encode!(nmap)
-
-      ref_map =
-        URI.decode(ref)
-        |> process_local_path()
-        |> get_head_list_path(omap)
-        |> Poison.encode!()
-        |> String.slice(1..-2)
-
-      String.replace(str, ~r/"\$ref":"#{ref}"/, ref_map)
-      |> String.replace(~r/"\$ref":"#{ref}"/, "")
-      |> Poison.decode!()
-    else
-      ref_list = ref_list ++ [ref]
-      str = Poison.encode!(nmap)
-      relist = Regex.scan(~r/"\$ref":"(?<name>[^"]*)"/, str)
-      if length(relist) == 0, do: nmap, else: find_replace_ref(str, relist, omap, ref_list)
-    end
-  end
-
-  def find_replace_ref(str, relist, omap, ref_list) do
-    nlist =
-      for n <- relist do
-        [refstr, ref] = n
-        ref_map = URI.decode(ref) |> process_local_path() |> get_head_list_path(omap)
-
-        map =
-          check_ref_string(ref_map, omap, ref_list, ref)
-          |> Poison.encode!()
-          |> String.slice(1..-2)
-
-        {refstr, map}
-      end
-
-    Enum.reduce(nlist, str, fn {ref, map} = x, acc -> String.replace(acc, "#{ref}", map) end)
-    |> Poison.decode!()
-  end
-
   def get_head_list_path(path_list, omap) do
     {head, tail} = Enum.split(path_list, -1)
 
