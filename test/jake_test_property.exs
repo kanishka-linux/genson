@@ -67,9 +67,11 @@ defmodule JakeTestProperty do
     jschema = ~s({"not": {"type": "integer"}})
     test_generator_property(jschema)
   end
-  
+
   property "test not string foo" do
-    jschema = ~s({"type": "object", "properties": {"foo":{"not": {"type":"string"}}, "bar": {"type":"integer"}}})
+    jschema =
+      ~s({"type": "object", "properties": {"foo":{"not": {"type":"string"}}, "bar": {"type":"integer"}}})
+
     test_generator_property(jschema)
   end
 
