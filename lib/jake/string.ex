@@ -9,12 +9,12 @@ defmodule Jake.String do
     {min, max}
   end
 
-  def gen_string(map, pattern, _size) when is_nil(pattern) do
+  def gen_string(map, pattern) when is_nil(pattern) do
     {min, max} = find_min_max(map)
     StreamData.string(:alphanumeric, [{:max_length, max}, {:min_length, min}])
   end
 
-  def gen_string(map, pattern, _size) when is_binary(pattern) do
+  def gen_string(map, pattern) when is_binary(pattern) do
     {min, max} = find_min_max(map)
     pat = Randex.stream(~r/#{pattern}/, mod: Randex.Generator.StreamData)
 
