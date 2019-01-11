@@ -3,29 +3,31 @@ defmodule Jake.Ref do
       when is_nil(ref) or is_map(ref) do
     {map, false}
   end
-  
+
   def expand_ref(ref, map, omap)
       when ref == "#" do
-    nmap = Map.drop(map, ["$ref"]) |> Map.merge(omap) 
+    nmap = Map.drop(map, ["$ref"]) |> Map.merge(omap)
     {nmap, true}
   end
-  
+
   def expand_ref(ref, map, omap) when is_binary(ref) do
     nmap = Map.drop(map, ["$ref"])
     uri = URI.decode(ref)
-    
+
     ref_map =
       if String.starts_with?(uri, "http") do
         process_http_path(uri)
       else
         process_local_path(uri) |> get_head_list_path(omap)
       end
+
     nmap =
       if ref_map != nil do
         Map.merge(nmap, ref_map)
       else
         nmap
       end
+
     {nmap, true}
   end
 
