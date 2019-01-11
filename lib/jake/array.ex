@@ -12,41 +12,41 @@ defmodule Jake.Array do
 
   @max_items 1000
 
-  def gen_array(%{"items" => items} = map, omap, size) do
+  def gen_array(%{"items" => items} = map, schema) do
     case items do
       item when is_map(item) and map_size(item) == 0 ->
         StreamData.constant([])
 
       item when is_map(item) ->
-        gen_list(map, item, omap, size)
+        gen_list(map, item, schema)
 
       item when is_list(item) ->
-        gen_tuple(map, item, omap, size)
+        gen_tuple(map, item, schema)
 
       _ ->
         raise "Invalid items in array"
     end
   end
 
-  def gen_array(map, omap, size), do: arraytype(map, map["items"], omap, size)
+  def gen_array(map, schema), do: arraytype(map, map["items"], schema)
 
-  def arraytype(map, items, omap, size) when is_nil(items) do
-    item = get_one_of(omap, size)
+  def arraytype(map, items, schema) when is_nil(items) do
+    item = get_one_of(schema)
     {min, max} = get_min_max(map)
     decide_min_max(map, item, min, max)
   end
 
-  def gen_tuple(map, items, omap, size) do
-    list = for n <- items, is_map(n), do: Jake.gen_init(n, omap, size)
+  def gen_tuple(map, items, schema) do
+    list = for n <- items, is_map(n), do: Map.put(schema, "map", n) |> Jake.gen_init()
 
     {min, max} = get_min_max(map)
 
     case map["additionalItems"] do
       x when is_map(x) ->
-        add_additional_items(list, Jake.gen_init(x, omap, size), max, min)
+        add_additional_items(list, Jake.gen_init(Map.put(schema, "map", x)), max, min)
 
       x when (is_boolean(x) and x) or is_nil(x) ->
-        add_additional_items(list, get_one_of(omap, size), max, min)
+        add_additional_items(list, get_one_of(schema), max, min)
 
       x when is_boolean(x) and not x and length(list) in min..max ->
         StreamData.fixed_list(list)
@@ -56,9 +56,9 @@ defmodule Jake.Array do
     end
   end
 
-  def gen_list(map, items, omap, size) do
+  def gen_list(map, items, schema) do
     {min, max} = get_min_max(map)
-    item = Jake.gen_init(items, omap, size)
+    item = Map.put(schema, "map", items) |> Jake.gen_init()
     decide_min_max(map, item, min, max)
   end
 
@@ -81,8 +81,9 @@ defmodule Jake.Array do
     raise "Bounds of items not well defined"
   end
 
-  def get_one_of(omap, size) do
-    for(n <- @type_list, is_map(n), do: Jake.gen_init(n, omap, size)) |> StreamData.one_of()
+  def get_one_of(schema) do
+    for(n <- @type_list, is_map(n), do: Map.put(schema, "map", n) |> Jake.gen_init())
+    |> StreamData.one_of()
   end
 
   def add_additional_items(olist, additional, max, min) do
